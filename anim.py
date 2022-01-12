@@ -1,7 +1,9 @@
 from abc import abstractstaticmethod
 import turtle
 from math import acos, asin, sin, cos, pi, sqrt
-from typing import Reversible
+
+
+from numpy.random import rand
 
 wn  = turtle.Screen()
 wn.bgcolor("white")
@@ -20,18 +22,23 @@ def distance(turtle1, turtle2):
     return sqrt((r1[0]-r2[0])**2 + (r1[1]-r2[1])**2)
 
 def rebound(ut,un):
-    un *= -0.5
+    un *= -1
     return ut,un
 
 
+
 rp = 10
-rA = 50
-rB = 150
+
+rA = 100*rand()
+rB = 100*rand()
+ru = rA + rp
+xu = ru*(0.5-rand())*2
+
+
 xA = 0
 xB = -(rA+rB)
-ai = pi/2
-vi_mag = 4
-xu = -40
+ai = pi/4
+vi_mag = 5
 ru = rA + rp
 
 if abs(xu) < ru: #p can collide with particle A
