@@ -1,6 +1,7 @@
 from abc import abstractstaticmethod
 import turtle
 from math import acos, asin, sin, cos, pi, sqrt
+from typing import Reversible
 
 wn  = turtle.Screen()
 wn.bgcolor("white")
@@ -18,39 +19,31 @@ def distance(turtle1, turtle2):
     r2 = [turtle2.xcor(),turtle2.ycor()]
     return sqrt((r1[0]-r2[0])**2 + (r1[1]-r2[1])**2)
 
-
-def impact_location(d1, dp, off, ai):
-    ru = (d1+dp)/2
-    xspr = ru*cos(acos(xu/ru) + pi/2 - ai)
-    yspr = sqrt(ru**2 - xspr**2)
-    return [xspr,yspr]
+def rebound(ut,un):
+    un *= -0.5
+    return ut,un
 
 
-def dot(u,v):
-    dot_uv = 0.0
-    for i in range(len(u)):
-        dot_uv += u[i]*v[i]
-    return dot_uv
+rp = 10
+rA = 50
+rB = 150
+xA = 0
+xB = -(rA+rB)
+ai = pi/2
+vi_mag = 4
+xu = -40
+ru = rA + rp
 
-def mag2(u):
-    return dot(u,u)
+if abs(xu) < ru: #p can collide with particle A
+    xuB = (rB+rA)*sin(ai) + xu #shortest distance between centers of p and B
+    ruB = rp+rB #shortest distance for p to be able to collide with B
+    bi = acos(xu/ru) #set the impaction angle to A particle first
+    if abs(xuB) <= ruB: # p hits the B first
+        dl_AB = sqrt(ru**2-xu**2) - sqrt(ruB**2-xuB**2) - cos(ai)*(rA+rB)
+        if(dl_AB<0): #p hits the B first
+            bi = acos(xuB/ruB) #rebound angle, if p hits the A first
 
-
-
-dp = 20
-dA = 120
-dB = 120
-ai = pi/3
-vi_mag = 5
-xu = -1.0
-du = (dp + dA)/2
-
-if xu < (dA+dp)/2:
-    if xu > (dB - (dB+dA)*sin(ai) + dp) / 2:
-        bi = acos(2*xu/(dA+dp))
-    else:
-        bi = acos(2/(dB+dp)*(xu +(dA+dB)*sin(ai)/2))
-else:
+else: #p does not hit A nor B 
     print("vedle")
     bi = 0
 
@@ -58,7 +51,7 @@ else:
 impactor = turtle.Turtle()
 impactor.shape("circle")
 impactor.color("red")
-impactor.shapesize(dp/20)
+impactor.shapesize(rp/10)
 impactor.speed(0)
 impactor.penup()
 impactor.goto(-200*cos(ai) + xu*sin(ai),200*sin(ai) + xu*cos(ai))
@@ -69,7 +62,7 @@ impactor.pendown()
 
 particle_A = turtle.Turtle()
 particle_A.shape("circle")
-particle_A.shapesize(dA/20)
+particle_A.shapesize(rA/10)
 particle_A.color("black")
 particle_A.speed(0)
 particle_A.penup()
@@ -78,11 +71,11 @@ particle_A.goto(0,0)
 
 particle_B = turtle.Turtle()
 particle_B.shape("circle")
-particle_B.shapesize(dB/20)
+particle_B.shapesize(rB/10)
 particle_B.color("black")
 particle_B.speed(0)
 particle_B.penup()
-particle_B.goto(-(dA+dB)/2,0)
+particle_B.goto(-(rA+rB),0)
 
 
 reboundA = False
@@ -91,59 +84,47 @@ time = 0
 while time < 100:
     time += 1
     #bounce
-    if distance(impactor,particle_A) <= (dA+dp)/2 and not reboundA:
-        impactor.dx1, impactor.dy1 = rotate(impactor.dx, impactor.dy, ai)
-        impactor.dn, impactor.dt = rotate(impactor.dx1, impactor.dy1, bi)
-
-        impactor.dn *= -1
-
-        br = -bi
+    if distance(impactor,particle_A) <= (rA+rp) and not reboundA:
+        epsilon = bi - ai
+        impactor.dt, impactor.dn = rotate(impactor.dx, impactor.dy, epsilon)
+        impactor.dt, impactor.dn = rebound(impactor.dt, impactor.dn)
+        br = bi
         ar = br + bi - ai
+        impactor.dx, impactor.dy = rotate(impactor.dt, impactor.dn, -epsilon)
+        print(impactor.dx, impactor.dy)
 
-        impactor.dx1, impactor.dy1 = rotate(impactor.dn, impactor.dt, br)
-        impactor.dx, impactor.dy = rotate(impactor.dx1, impactor.dy1, -ai)
-
-        spr = impact_location(dA,dp,xu,ai)
-        sB = [-dB/2, 0]
-        s = [spr[0]-sB[0],spr[1]-sB[1]]
-        ur = (impactor.dx, impactor.dy)
-        xu2 = sqrt(mag2(s) - (dot(s,ur))**2/mag2(ur))
         ai = ar
-        if 2*xu2/(dB+dp) <= 1:
-            bi = acos(2*xu2/(dB+dp))
-        print(ai)
-        print(bi)
 
         reboundA = True
         reboundB = False
 
+        x_imp = (rA+rp)*sin(epsilon)
+        y_imp = (rA+rp)*cos(epsilon)
+        xu = y_imp*cos(ai) + (x_imp-xA)*sin(ai)
+        if(abs(xu) < (rB+rp)):
+            bi = acos(xu/(rB+rp))
 
-    elif distance(impactor,particle_B) <= (dB+dp)/2 and not reboundB:
-        impactor.dx1, impactor.dy1 = rotate(impactor.dx, impactor.dy, ai)
-        impactor.dn, impactor.dt = rotate(impactor.dx1, impactor.dy1, bi)
 
-        impactor.dn *= -1
+    elif distance(impactor,particle_B) <= (rB+rp) and not reboundB:
+        epsilon = bi - ai
+        impactor.dt, impactor.dn = rotate(impactor.dx, impactor.dy, epsilon)
+        impactor.dt, impactor.dn = rebound(impactor.dt, impactor.dn)
+        br = bi
 
-        br = -bi
         ar = br + bi - ai
 
-        impactor.dx1, impactor.dy1 = rotate(impactor.dn, impactor.dt, br)
-        impactor.dx, impactor.dy = rotate(impactor.dx1, impactor.dy1, -ai)
+        impactor.dx, impactor.dy = rotate(impactor.dt, impactor.dn, -epsilon)
 
-        spr = impact_location(dB,dp,xu,ai)
-        sA = [-dA/2, 0]
-        s = [spr[0]-sA[0],spr[1]-sA[1]]
-        ur = (impactor.dx, impactor.dy)
-        xu2 = sqrt(mag2(s) - (dot(s,ur))**2/mag2(ur))
         ai = ar
-        if 2*xu2/(dA+dp) <= 1:
-            bi = acos(2*xu2/(dA+dp))
-        print(ai)
-        print(bi)
 
         reboundB = True
         reboundA = False
 
+        x_imp = xB + (rB+rp)*sin(epsilon)
+        y_imp = (rB+rp)*cos(epsilon)
+        xu = y_imp*cos(ai) + (x_imp-xA)*sin(ai)
+        if(abs(xu) < (rA+rp)):
+            bi = acos(abs(xu)/(rA+rp))
 
 
     #update impactor position
