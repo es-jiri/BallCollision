@@ -16,6 +16,7 @@ wn.title("Impact simulation")
 def rotate(x0,y0,angle):  
     x1 =  x0*cos(angle) + y0*sin(angle)
     y1 = -x0*sin(angle) + y0*cos(angle)
+
     return x1,y1
 
 
@@ -43,54 +44,28 @@ def update_xy_velocity(impactor,ai,bi):
     impactor.dx, impactor.dy = rotate(impactor.dt, impactor.dn, -epsilon)
     return impactor, ar
 
+ai = pi/4
+vi_mag = 5
 
 rp = 10
 rmax = 100
 
-if 1: #random case
-    rA = rmax*rand()
-    rB = rmax*rand()
-    rC = rmax*rand()
-    rD = rmax*rand()
-    ru = rA + rp
-    xu = rA*(0.5-rand())*2
-else: #predefined case
-    rA = 100
-    rB = 1
-    rC = 1
-    rD = 1
-    ru = rA + rp
-    xu = -50
 
-
+rA = rmax*rand()
+rB = rmax*rand()
+rC = rmax*rand()
+rD = rmax*rand()
+ru = rA + rp
+xu = rA*(0.5-rand())*2*sin(ai) #the p's initial trajectory crosses the "A" mid plane
 
 xA = 0
 xB = -(rA+rB)
 xC = rA+rC
 xD = -(rA+2*rB+rD)
 
-ai = pi/4
-vi_mag = 5
-ru = rA + rp
+ri = [rD, rB, rA, rC]
+xi = [xD, xB, xA, xC]
 
-x_imp = 0.0
-y_imp = 0.0
-
-if abs(xu) < ru: #p can collide with particle A
-    xuB = (rB+rA)*sin(ai) + xu #shortest distance between centers of p and B
-    ruB = rp+rB #shortest distance for p to be able to collide with B
-    bi = acos(xu/ru) #set the impaction angle to A particle first
-    will_be_hitted_id = 1
-    if abs(xuB) <= ruB: # p hits the B first
-        dl_AB = sqrt(ru**2-xu**2) - sqrt(ruB**2-xuB**2) - cos(ai)*(rA+rB)
-        if(dl_AB<0): #p hits the B first
-            bi = acos(xuB/ruB) #rebound angle, if p hits the A first
-            will_be_hitted_id = 0
-
-
-else: #p does not hit A nor B 
-    print("vedle")
-    bi = 0
 
 
 impactor = turtle.Turtle()
@@ -99,7 +74,7 @@ impactor.color("red")
 impactor.shapesize(rp/10)
 impactor.speed(0)
 impactor.penup()
-impactor.goto(-200*cos(ai) + xu*sin(ai),200*sin(ai) + xu*cos(ai))
+impactor.goto(-300*cos(ai) + xu*sin(ai),300*sin(ai) + xu*cos(ai))
 impactor.dx =  vi_mag*cos(ai)
 impactor.dy = -vi_mag*sin(ai)
 impactor.pendown()
@@ -140,14 +115,39 @@ particle_D.penup()
 particle_D.goto(xD,0)
 
 
+ru = rA + rp
+
+x_imp = 0.0
+y_imp = 0.0
+
+
+xu0 = xu
+ru0 = ru
+bi = acos(xu/ru)
+dl_min = 0
+for i in range(4):
+    #increment particle indices in the direction of the "p" movement until a collision occurs
+    #calculate closest approach of "p" to the j-th particle
+    if i==2:
+        continue
+    rui = rp + ri[i]
+    xui = (xA - xi[i])*sin(ai) + xu0
+    if(abs(xui)<rui):
+        dl_i = sqrt(ru0**2-xu0**2) - sqrt(rui **2-xui**2) - cos(ai)*(xA - xi[i])
+        if(dl_i<dl_min):
+            dl_min = dl_i
+            xu = xui
+            ru = rui
+            bi = acos(xui/rui) #rebound angle, if p hits the A first
+            will_be_hitted_id = i
+
+
 time = 0
 hitted_id = -2
 collision = False
 ar = 0
-ri = [rD, rB, rA, rC]
-xi = [xD, xB, xA, xC]
 
-while time < 80:
+while time < 120:
     time += 1
     #bounce
     if turtle_distance(impactor,particle_A) <= (rA+rp) and hitted_id != 2:
