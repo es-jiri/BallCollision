@@ -1,7 +1,6 @@
-from abc import abstractstaticmethod
+
 import turtle
 from math import acos, asin, sin, cos, pi, sqrt
-from numpy.core.fromnumeric import amin
 from numpy.random import rand
 from numpy import sign
 
@@ -30,8 +29,10 @@ def turtle_distance(turtle1, turtle2):
     return sqrt((r1[0]-r2[0])**2 + (r1[1]-r2[1])**2)
 
 
+Cm = 3.5
 def rebound(ut,un):
-    un *= -1
+    un *= -0.5
+    ut *= (1 - 2/7.0*Cm/(1+Cm))
     return ut,un
 
 def update_xy_velocity(impactor,ai,bi):
@@ -39,7 +40,10 @@ def update_xy_velocity(impactor,ai,bi):
     impactor.dt, impactor.dn = rotate(impactor.dx, impactor.dy, epsilon)
     impactor.dt, impactor.dn = rebound(impactor.dt, impactor.dn)
     vmag = sqrt(impactor.dt**2 + impactor.dn**2)
-    br = acos(impactor.dt/vmag)
+    if(vmag>0):
+        br = acos(impactor.dt/vmag)
+    else:
+        br = bi
     ar = br + bi - ai
     impactor.dx, impactor.dy = rotate(impactor.dt, impactor.dn, -epsilon)
     return impactor, ar
@@ -47,8 +51,8 @@ def update_xy_velocity(impactor,ai,bi):
 ai = pi/4
 vi_mag = 5
 
-rp = 10
-rmax = 100
+rp = 20
+rmax = 50
 
 
 rA = rmax*rand()
@@ -57,11 +61,13 @@ rC = rmax*rand()
 rD = rmax*rand()
 ru = rA + rp
 xu = rA*(0.5-rand())*2*sin(ai) #the p's initial trajectory crosses the "A" mid plane
+max_space = 10
+
 
 xA = 0
-xB = -(rA+rB)
-xC = rA+rC
-xD = -(rA+2*rB+rD)
+xB = xA - (rA+rB+max_space*rand())
+xC = xA + (rA+rC+max_space*rand())
+xD = xB - (rB+rD+max_space*rand())
 
 ri = [rD, rB, rA, rC]
 xi = [xD, xB, xA, xC]
@@ -74,7 +80,7 @@ impactor.color("red")
 impactor.shapesize(rp/10)
 impactor.speed(0)
 impactor.penup()
-impactor.goto(-300*cos(ai) + xu*sin(ai),300*sin(ai) + xu*cos(ai))
+impactor.goto(-150*cos(ai) + xu*sin(ai),150*sin(ai) + xu*cos(ai))
 impactor.dx =  vi_mag*cos(ai)
 impactor.dy = -vi_mag*sin(ai)
 impactor.pendown()
@@ -86,7 +92,7 @@ particle_A.shapesize(rA/10)
 particle_A.color("black")
 particle_A.speed(0)
 particle_A.penup()
-particle_A.goto(0,0)
+particle_A.goto(xA,0)
 
 
 particle_B = turtle.Turtle()
@@ -95,7 +101,7 @@ particle_B.shapesize(rB/10)
 particle_B.color("black")
 particle_B.speed(0)
 particle_B.penup()
-particle_B.goto(-(rA+rB),0)
+particle_B.goto(xB,0)
 
 
 particle_C = turtle.Turtle()
@@ -170,9 +176,14 @@ while time < 120:
         impactor, ar = update_xy_velocity(impactor,ai,bi)
         hitted_id = 0
 
+    elif impactor.ycor()<=0 and impactor.dy<0:
+        impactor, ar = update_xy_velocity(impactor,ai,ai)
+        hitted_id = -1
+
 
     #update bi
     if collision:
+        print(sqrt(impactor.dx**2+impactor.dy**2))
         #calculate coordinates of the center of "p" in the moment of collision
         x_imp = -(ri[hitted_id]+rp)*sin(bi-ai) + xi[hitted_id]
         y_imp = (ri[hitted_id]+rp)*cos(bi-ai)
@@ -181,9 +192,28 @@ while time < 120:
         #adjust the particle index according to the direction of particle movement
         will_be_hitted_id = hitted_id + int(sign(impactor.dx))
         j = will_be_hitted_id
-        
+
+        #if "p" collided with the last particle and still descends, 
+        #the last particle has to be moved to a new location to prevent further descent of "p"
+        if(hitted_id==3 and impactor.dy<0 and impactor.dx>0):
+            #shift the last particle's position and alter its diameter
+            xC0 = xC
+            rC0 = rC
+            rC = rmax*rand() #choose new particle's radius
+            xC = xC0+(rC+rC0) #determine shift in the x direction
+            particle_C.goto(xC,0) #shift the patricle
+            particle_C.shapesize(rC/10) #update its radius     
+            xi[3] = xC
+            ri[3] = rC
+            hitted_id = 2
+            will_be_hitted_id = 3
+            j = 3  
+
+        fate_updates = 0
+        max_fate_updates = 3
         #increment particle indices in the direction of the "p" movement until a collision occurs
-        while -1<j<4:
+        while -1<j<4 and fate_updates<max_fate_updates:
+            fate_updates += 1
             #calculate closest approach of "p" to the j-th particle
             xu = y_imp*cos(ai) + (x_imp-xi[j])*sin(ai)
             ru = ri[j]+rp
@@ -191,11 +221,11 @@ while time < 120:
                 bi = acos(xu/ru)
                 break #collision with jth particle will occur, break the loop
 
-            if j==3 and impactor.dy<0 and impactor.dx>0: #particle missed the last particle, but still descends to the surface
+            elif j==3 and impactor.dy<0 and impactor.dx>0: #particle missed the last particle, but still descends to the surface
                 #shift the last particle's position and alter its diameter
                 xC0 = xC
                 rC0 = rC
-                rC = rmax*rand() #choose new particle's radius
+                rC = rmax*rand()#choose new particle's radius
                 xC = xC0+(rC+rC0) #determine shift in the x direction
                 particle_C.goto(xC,0) #shift the patricle
                 particle_C.shapesize(rC/10) #update its radius     
