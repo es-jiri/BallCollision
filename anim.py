@@ -39,9 +39,12 @@ def update_xy_velocity(impactor,ai,bi):
     return impactor, ar
 
 
-rads = [5, 15, 25, 35, 45, 55]
-r_dep_masses = [3, 2, 1.5, 1.8, 2.0, 1.0]
+rads = [5, 15, 25, 35, 45]
+r_dep_masses = [3, 2, 1.5, 1.8, 2.0]
+
 tot_dep_mass = sum(r_dep_masses)
+min_dep_mass = 10
+
 rel_dep_mass = [mass/tot_dep_mass for mass in r_dep_masses]
 cum_prob = [rel_dep_mass[0]]
 for i in range(1,len(rads)):
@@ -62,13 +65,13 @@ def random_radius():
 
 while True:
     #animation parameters
-    start_distance = 300
-    exit_distance = 200
+    start_distance = 400
+    exit_distance = 400
 
     #impactor properties
-    ai = 90*pi/180
+    ai = 30*pi/180
     vi_mag = 5
-    rp = 10
+    rp = 50
 
     #deposit parameters
     rmax = max(rads)
@@ -78,10 +81,10 @@ while True:
     #create deposited particles
     N = int((rp+rmax) / (rmax/cot(ai))) + 1 # "A" will have index "N"
 
+    #initialize lists of particle sizes and positions
     ri = [] # radii
     for i in range(N+2):
         ri.append(random_radius())
-
     xi = []
     for j in range(N+2):
         xi.append(0)
@@ -157,12 +160,17 @@ while True:
     max_hits = 50
     hits = 0
 
+
     while hits < max_hits:
         hitted_id = next_p
-        
         hits += 1
         if(-1 < next_p < N+2):
-            impactor, ar = update_xy_velocity(impactor,ai,bi)
+
+            if(rand()>min(tot_dep_mass/min_dep_mass, 1.0)):
+                impactor, ar = update_xy_velocity(impactor,ai,ai)
+            else:
+                impactor, ar = update_xy_velocity(impactor,ai,bi)
+
             if impactor.dx**2+impactor.dy**2 == 0 :
                 break
             #calculate coordinates of the center of "p" in the moment of collision
