@@ -11,6 +11,11 @@ wn.bgcolor("white")
 wn.title("Impact simulation")
 
 
+def cot(angle):
+    c = cos(angle)
+    return c/sqrt(1-c*c)
+
+
 def rotate(x0,y0,angle):  
     x1 =  x0*cos(angle) + y0*sin(angle)
     y1 = -x0*sin(angle) + y0*cos(angle)
@@ -34,8 +39,8 @@ def update_xy_velocity(impactor,ai,bi):
     return impactor, ar
 
 
-rads = [5, 25, 40, 60]
-r_dep_masses = [1.0, 0.5, 0.3, 0.2]
+rads = [5, 15, 25, 35, 45, 55]
+r_dep_masses = [3, 2, 1.5, 1.8, 2.0, 1.0]
 tot_dep_mass = sum(r_dep_masses)
 rel_dep_mass = [mass/tot_dep_mass for mass in r_dep_masses]
 cum_prob = [rel_dep_mass[0]]
@@ -61,17 +66,17 @@ while True:
     exit_distance = 200
 
     #impactor properties
-    ai = 45*pi/180
+    ai = 90*pi/180
     vi_mag = 5
     rp = 10
 
     #deposit parameters
-    rmax = 100
+    rmax = max(rads)
     max_space = 0
 
 
     #create deposited particles
-    N = int(1/tan(ai)) + 1  # "A" will have index "N"
+    N = int((rp+rmax) / (rmax/cot(ai))) + 1 # "A" will have index "N"
 
     ri = [] # radii
     for i in range(N+2):
@@ -126,8 +131,6 @@ while True:
     y_imp = impactor.ycor()
 
 
-    xu0 = xu
-    ru0 = ru
     next_p = N
     bi = acos(xu/ru)
     dl_min = 0
@@ -137,9 +140,9 @@ while True:
         if i==N:
             continue
         rui = rp + ri[i]
-        xui = (xi[N] - xi[i])*sin(ai) + xu0
+        xui = (xi[N] - xi[i])*sin(ai) + xu
         if(abs(xui)<rui):
-            dl_i = sqrt(ru0**2-xu0**2) - sqrt(rui **2-xui**2) - cos(ai)*(xi[N] - xi[i])
+            dl_i = sqrt(ru**2-xu**2) - sqrt(rui **2-xui**2) - cos(ai)*(xi[N] - xi[i])
             if(dl_i<dl_min):
                 dl_min = dl_i
                 xu = xui
@@ -151,7 +154,7 @@ while True:
     hitted_id = -1
     ar = 0
 
-    max_hits = 10
+    max_hits = 50
     hits = 0
 
     while hits < max_hits:
@@ -177,7 +180,7 @@ while True:
                 #shift the last particle's position and alter its diameter
                 xC0 = xi[-1]
                 rC0 = ri[-1]
-                ri[-1] = rmax*rand() #choose new particle's radius
+                ri[-1] = random_radius() #choose new particle's radius
                 xi[-1] = xC0+(ri[-1]+rC0+max_space*rand()) #determine shift in the x direction
                 if draw_deposit:
                     dep_particles[-1].goto(xi[-1],0) #shift the patricle
@@ -190,7 +193,7 @@ while True:
                 #shift the last particle's position and alter its diameter
                 x0 = xi[0]
                 r0 = ri[0]
-                ri[0] = rmax*rand() #choose new particle's radius
+                ri[0] = random_radius() #choose new particle's radius
                 xi[0] = x0+(ri[0]+r0+max_space*rand()) #determine shift in the x direction
                 if draw_deposit:
                     dep_particles[0].goto(xi[0],0) #shift the patricle
@@ -215,17 +218,17 @@ while True:
                     #shift the last particle's position and alter its diameter
                     xC0 = xi[-1]
                     rC0 = ri[-1]
-                    ri[-1] = rmax*rand() #choose new particle's radius
+                    ri[-1] = random_radius() #choose new particle's radius
                     xi[-1] = xC0+(ri[-1]+rC0+max_space*rand()) #determine shift in the x direction
                     if draw_deposit:
                         dep_particles[-1].goto(xi[-1],0) #shift the patricle
                         dep_particles[-1].shapesize(ri[-1]/10) #update its radius   
 
-                elif next_p==0 and impactor.dy<0 and impactor.dx<0: #particle missed the last particle, but still descends to the surface
+                elif next_p==0 and impactor.dx<0 and impactor.dy<0: #particle missed the last particle, but still descends to the surface
                     #shift the last particle's position and alter its diameter
                     x0 = xi[0]
                     r0 = ri[0]
-                    ri[0] = rmax*rand() #choose new particle's radius
+                    ri[0] = random_radius() #choose new particle's radius
                     xi[0] = x0-(ri[0]+r0+max_space*rand()) #determine shift in the x direction
                     if draw_deposit:
                         dep_particles[0].goto(xi[0],0) #shift the patricle
@@ -244,7 +247,7 @@ while True:
             impactor.goto((x_imp,y_imp))
             break
 
-    input()
+    sleep(0.5)
     if clear_previous:
         wn.clear()
 
